@@ -127,7 +127,7 @@ def batch(directory: str, summarize: bool = False) -> None:
     """Process all video files in a directory."""
     video_files: List[str] = []
     for file in os.listdir(directory):
-        if file.lower().endswith((".mov", ".mp4")):  
+        if file.lower().endswith((".mov", ".mp4")):
             video_files.append(os.path.join(directory, file))
 
     if not video_files:

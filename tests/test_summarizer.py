@@ -6,14 +6,16 @@ from unittest.mock import Mock, patch
 import pytest
 from openai.error import AuthenticationError
 
-from mediamind.summarizer import Summarizer, SummarizationError
+from mediamind.summarizer import SummarizationError, Summarizer
 
 
 def test_summarizer_init_no_api_key() -> None:
     """Test that Summarizer raises error when no API key is provided."""
     with patch("mediamind.summarizer.load_dotenv", return_value=None):
         with patch.dict(os.environ, {}, clear=True):  # Remove all env vars
-            with pytest.raises(ValueError, match="OPENAI_API_KEY environment variable is not set"):
+            with pytest.raises(
+                ValueError, match="OPENAI_API_KEY environment variable is not set"
+            ):
                 Summarizer()
 
 
@@ -44,7 +46,7 @@ def test_summarize_invalid_sentences() -> None:
 def test_summarize_success(mock_create: Mock) -> None:
     """Test successful summarization."""
     mock_create.return_value.choices = [Mock(message=Mock(content="Test summary"))]
-    
+
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
         summarizer = Summarizer()
         summary = summarizer.summarize("Test text")
@@ -55,8 +57,10 @@ def test_summarize_success(mock_create: Mock) -> None:
 def test_summarize_api_error(mock_create: Mock) -> None:
     """Test error handling during summarization."""
     mock_create.side_effect = AuthenticationError("Invalid API key")
-    
+
     with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
         summarizer = Summarizer()
-        with pytest.raises(SummarizationError, match="Failed to generate summary: Invalid API key"):
+        with pytest.raises(
+            SummarizationError, match="Failed to generate summary: Invalid API key"
+        ):
             summarizer.summarize("Test text")

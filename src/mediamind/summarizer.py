@@ -21,9 +21,10 @@ class Summarizer:
         """
         # Try to load environment variables from .env file
         try:
-            env_path = Path(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            ) / ".env"
+            env_path = (
+                Path(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                / ".env"
+            )
             if env_path.exists():
                 load_dotenv(env_path)
         except Exception:
