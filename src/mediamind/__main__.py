@@ -127,11 +127,12 @@ def batch(directory: str, summarize: bool = False) -> None:
     """Process all video files in a directory."""
     video_files: List[str] = []
     for file in os.listdir(directory):
-        if file.endswith(".mov"):
+        if file.lower().endswith((".mov", ".mp4")):  
             video_files.append(os.path.join(directory, file))
 
     if not video_files:
-        raise click.UsageError("No .mov files found in directory")
+        console.print("No media files found in directory")
+        return
 
     for video_file in video_files:
         process_file(video_file, summarize, "transcripts")

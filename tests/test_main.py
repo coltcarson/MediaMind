@@ -45,6 +45,20 @@ def mock_components():
         }
 
 
+@pytest.fixture
+def cleanup_test_files():
+    """Clean up any test files after each test."""
+    yield
+    # Clean up test files in the transcripts directory
+    transcripts_dir = Path("transcripts")
+    if transcripts_dir.exists():
+        # Only clean up files that contain the mock datetime pattern
+        # This pattern comes from the mock_datetime fixture
+        mock_pattern = "*_<MagicMock name='datetime.datetime.now().strftime()'*.md"
+        for file in transcripts_dir.glob(mock_pattern):
+            file.unlink()
+
+
 def test_cli_help(cli_runner: CliRunner) -> None:
     """Test the CLI help output."""
     result = cli_runner.invoke(cli, ["--help"])
@@ -53,6 +67,7 @@ def test_cli_help(cli_runner: CliRunner) -> None:
 
 
 @patch("mediamind.__main__.datetime")
+@pytest.mark.usefixtures("cleanup_test_files")
 def test_process_command_with_summary(
     mock_datetime: Mock,
     cli_runner: CliRunner,
@@ -73,8 +88,13 @@ def test_process_command_with_summary(
     assert "Processing complete" in result.output
 
 
+@patch("mediamind.__main__.datetime")
+@pytest.mark.usefixtures("cleanup_test_files")
 def test_process_command_no_summary(
-    cli_runner: CliRunner, mock_components: Dict, tmp_path: Path
+    mock_datetime: Mock,
+    cli_runner: CliRunner,
+    mock_components: Dict,
+    tmp_path: Path,
 ) -> None:
     """Test processing a single file without summary."""
     # Create test file
@@ -87,8 +107,13 @@ def test_process_command_no_summary(
     assert "Processing complete" in result.output
 
 
+@patch("mediamind.__main__.datetime")
+@pytest.mark.usefixtures("cleanup_test_files")
 def test_process_command_error(
-    cli_runner: CliRunner, mock_components: Dict, tmp_path: Path
+    mock_datetime: Mock,
+    cli_runner: CliRunner,
+    mock_components: Dict,
+    tmp_path: Path,
 ) -> None:
     """Test error handling in process command."""
     # Create test file
@@ -104,8 +129,13 @@ def test_process_command_error(
     assert result.exit_code == 1
 
 
+@patch("mediamind.__main__.datetime")
+@pytest.mark.usefixtures("cleanup_test_files")
 def test_batch_command(
-    cli_runner: CliRunner, mock_components: Dict, tmp_path: Path
+    mock_datetime: Mock,
+    cli_runner: CliRunner,
+    mock_components: Dict,
+    tmp_path: Path,
 ) -> None:
     """Test batch processing directory."""
     # Create test files
@@ -126,8 +156,13 @@ def test_batch_command(
     assert mock_components["processor"].process_file.call_count == len(test_files)
 
 
+@patch("mediamind.__main__.datetime")
+@pytest.mark.usefixtures("cleanup_test_files")
 def test_batch_command_no_files(
-    cli_runner: CliRunner, mock_components: Dict, tmp_path: Path
+    mock_datetime: Mock,
+    cli_runner: CliRunner,
+    mock_components: Dict,
+    tmp_path: Path,
 ) -> None:
     """Test batch processing with no media files."""
     # Create empty directory
@@ -140,8 +175,13 @@ def test_batch_command_no_files(
     assert "No media files found" in result.output
 
 
+@patch("mediamind.__main__.datetime")
+@pytest.mark.usefixtures("cleanup_test_files")
 def test_batch_command_error(
-    cli_runner: CliRunner, mock_components: Dict, tmp_path: Path
+    mock_datetime: Mock,
+    cli_runner: CliRunner,
+    mock_components: Dict,
+    tmp_path: Path,
 ) -> None:
     """Test error handling in batch command."""
     # Create test file

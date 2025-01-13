@@ -14,19 +14,24 @@ class Summarizer:
     """Class for generating summaries using OpenAI's GPT API."""
 
     def __init__(self) -> None:
-        """Initialize the summarizer with API configuration."""
-        # Load environment variables from .env file
-        env_path = Path(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        ).joinpath(".env")
-        load_dotenv(env_path)
+        """Initialize the Summarizer.
+
+        Raises:
+            ValueError: If OPENAI_API_KEY is not set
+        """
+        # Try to load environment variables from .env file
+        try:
+            env_path = Path(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            ) / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+        except Exception:
+            pass  # Ignore .env loading errors
 
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
-            raise SummarizationError(
-                "OpenAI API key not found. Please set OPENAI_API_KEY "
-                "in your .env file."
-            )
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
         openai.api_key = self.api_key
 
     def _create_prompt(
@@ -101,16 +106,17 @@ class Summarizer:
             Generated summary text
 
         Raises:
+            ValueError: If input text is empty or max_length is invalid
             SummarizationError: If summarization fails
         """
+        # Validate input
+        if not text.strip():
+            raise ValueError("Input text is empty")
+
+        if max_length is not None and max_length <= 0:
+            raise ValueError("Invalid max_length: must be positive")
+
         try:
-            # Validate input
-            if not text.strip():
-                raise SummarizationError("Input text is empty")
-
-            if max_length is not None and max_length <= 0:
-                raise SummarizationError("max_length must be positive")
-
             # Create prompt
             prompts = self._create_prompt(text, max_length, style)
 
@@ -125,8 +131,14 @@ class Summarizer:
                 max_tokens=1000,
             )
 
-            # Extract and return the summary
-            return str(response.choices[0].message.content)
+            # Extract and return summary
+            summary = response.choices[0].message.content.strip()
+            if not summary:
+                raise SummarizationError("Generated summary is empty")
 
+            return summary
+
+        except ValueError as e:
+            raise e
         except Exception as e:
             raise SummarizationError(f"Failed to generate summary: {str(e)}")
