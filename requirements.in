@@ -1,0 +1,15 @@
+# Core dependencies
+tqdm>=4.67.1
+python-dotenv>=1.0.1
+pydub>=0.25.1
+moviepy==1.0.3  # Specific version for compatibility
+openai==0.28.0
+openai-whisper>=20240930
+ffmpeg-python>=0.2.0
+
+# CLI support
+click>=8.1.7
+rich>=13.9.4
+
+# Type hints
+typing-extensions>=4.12.2

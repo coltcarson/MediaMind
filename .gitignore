@@ -6,6 +6,15 @@ __pycache__/
 # C extensions
 *.so
 
+<<<<<<< HEAD
+=======
+# Shell scripts
+*.sh
+
+# Transcripts
+transcripts/
+
+>>>>>>> development
 # Distribution / packaging
 .Python
 build/
