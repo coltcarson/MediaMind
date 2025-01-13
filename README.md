@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# MediaMind
-MediaMind: An intelligent media management system that helps organize and process your media files efficiently. Built with modern tools and designed for seamless media handling.
-=======
 # 🎥 MediaMind
 
 MediaMind is an AI-powered tool that transcribes and summarizes .mov video files using OpenAI's Whisper model for transcription and GPT-4o for summarization.
