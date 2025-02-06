@@ -9,7 +9,7 @@ __pycache__/
 <<<<<<< HEAD
 =======
 # Shell scripts
-*.sh
+# *.sh
 
 # Transcripts
 transcripts/

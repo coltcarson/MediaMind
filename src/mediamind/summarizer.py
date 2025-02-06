@@ -2,9 +2,10 @@
 
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional, cast
 
 import openai
+import tiktoken
 from dotenv import load_dotenv
 
 from mediamind.exceptions import SummarizationError
@@ -21,10 +22,10 @@ class Summarizer:
         """
         # Try to load environment variables from .env file
         try:
-            env_path = (
-                Path(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-                / ".env"
+            base_path = Path(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             )
+            env_path = base_path / ".env"
             if env_path.exists():
                 load_dotenv(env_path)
         except Exception:
@@ -34,6 +35,89 @@ class Summarizer:
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set")
         openai.api_key = self.api_key
+        self.encoding = tiktoken.encoding_for_model("gpt-4o")
+        # Set chunk sizes with some buffer for prompt and completion
+        self.max_chunk_tokens = 96000  # 75% of model's context length for input
+        self.max_completion_tokens = 16000  # Maximum allowed completion tokens
+
+    def _count_tokens(self, text: str) -> int:
+        """Count the number of tokens in a text string.
+
+        Args:
+            text: The text to count tokens for
+
+        Returns:
+            Number of tokens
+        """
+        return len(self.encoding.encode(text))
+
+    def _split_text(self, text: str) -> List[str]:
+        """Split text into chunks that fit within token limits.
+
+        Args:
+            text: The text to split
+
+        Returns:
+            List of text chunks
+        """
+        paragraphs = text.split("\n\n")
+        chunks = []
+        current_chunk = []
+        current_tokens = 0
+
+        for paragraph in paragraphs:
+            paragraph_tokens = self._count_tokens(paragraph)
+
+            if current_tokens + paragraph_tokens > self.max_chunk_tokens:
+                if current_chunk:  # Save current chunk if it exists
+                    chunks.append("\n\n".join(current_chunk))
+                current_chunk = [paragraph]
+                current_tokens = paragraph_tokens
+            else:
+                current_chunk.append(paragraph)
+                current_tokens += paragraph_tokens
+
+        if current_chunk:  # Add the last chunk
+            chunks.append("\n\n".join(current_chunk))
+
+        return chunks
+
+    def _combine_summaries(self, summaries: List[str]) -> str:
+        """Combine multiple summaries into a single coherent summary.
+
+        Args:
+            summaries: List of summaries to combine
+
+        Returns:
+            Combined summary
+        """
+        if len(summaries) == 1:
+            return summaries[0]
+
+        combine_prompt = (
+            "Below are multiple sections of meeting minutes from the same meeting. "
+            "Please combine them into a single, coherent set of meeting minutes, "
+            "removing any duplicates and maintaining the same format. "
+            "Ensure all unique information is preserved.\n\n"
+            "Sections to combine:\n\n" + "\n---\n".join(summaries)
+        )
+
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert at combining meeting minutes into a single coherent summary.",
+                    },
+                    {"role": "user", "content": combine_prompt},
+                ],
+                temperature=0.7,
+                max_tokens=self.max_completion_tokens,
+            )
+            return cast(str, response.choices[0].message.content).strip()
+        except Exception as e:
+            raise SummarizationError(f"Failed to combine summaries: {str(e)}")
 
     def _create_prompt(
         self, text: str, max_length: Optional[int] = None, style: Optional[str] = None
@@ -118,26 +202,39 @@ class Summarizer:
             raise ValueError("Invalid max_length: must be positive")
 
         try:
-            # Create prompt
-            prompts = self._create_prompt(text, max_length, style)
+            # Split text into chunks if necessary
+            text_chunks = self._split_text(text)
+            summaries = []
 
-            # Call OpenAI API
-            response = openai.ChatCompletion.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": prompts["system"]},
-                    {"role": "user", "content": prompts["user"]},
-                ],
-                temperature=0.7,
-                max_tokens=1000,
-            )
+            # Process each chunk
+            for chunk in text_chunks:
+                # Create prompt
+                prompts = self._create_prompt(chunk, max_length, style)
 
-            # Extract and return summary
-            summary = response.choices[0].message.content.strip()
-            if not summary:
+                # Call OpenAI API
+                response = openai.ChatCompletion.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": prompts["system"]},
+                        {"role": "user", "content": prompts["user"]},
+                    ],
+                    temperature=0.7,
+                    max_tokens=self.max_completion_tokens,
+                )
+
+                # Extract summary
+                message_content = cast(str, response.choices[0].message.content)
+                summary = message_content.strip()
+                if not summary:
+                    raise SummarizationError("Generated summary is empty")
+                summaries.append(summary)
+
+            # Combine summaries if there are multiple chunks
+            final_summary = self._combine_summaries(summaries)
+            if not final_summary:
                 raise SummarizationError("Generated summary is empty")
 
-            return summary
+            return final_summary
 
         except ValueError as e:
             raise e

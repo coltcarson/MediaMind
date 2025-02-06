@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Generator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -18,7 +18,7 @@ def cli_runner() -> CliRunner:
 
 
 @pytest.fixture
-def mock_components():
+def mock_components() -> Generator[Dict, None, None]:
     """Mock the main components."""
     with patch("mediamind.__main__.AudioProcessor") as mock_processor, patch(
         "mediamind.__main__.Transcriber"
@@ -46,7 +46,7 @@ def mock_components():
 
 
 @pytest.fixture
-def cleanup_test_files():
+def cleanup_test_files() -> Generator[None, None, None]:
     """Clean up any test files after each test."""
     yield
     # Clean up test files in the transcripts directory
@@ -63,7 +63,7 @@ def test_cli_help(cli_runner: CliRunner) -> None:
     """Test the CLI help output."""
     result = cli_runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    assert "MediaMind CLI" in result.output
+    assert "Mediamind CLI" in result.output
 
 
 @patch("mediamind.__main__.datetime")
