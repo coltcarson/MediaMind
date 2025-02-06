@@ -42,26 +42,25 @@ def process_file(
             console.print("Transcribing audio...")
             transcript = transcriber.transcribe(audio_path)
 
-            # Generate summary if requested
+            # Format and save transcript
+            current_time = datetime.datetime.now()
+            file_timestamp = current_time.strftime("%Y-%m-%d %H-%M-%S")
+            timestamp = current_time.strftime("%Y%m%d_%H%M%S")
+
             if summarize and summarizer_instance is not None:
+                # Generate and save summary with transcript
                 console.print("Generating summary...")
                 summary = summarizer_instance.summarize(transcript)
-
-                # Format summary in markdown
-                current_time = datetime.datetime.now()
-                file_timestamp = current_time.strftime("%Y-%m-%d %H-%M-%S")
-                summary_timestamp = current_time.strftime("%Y%m%d_%H%M%S")
-
-                # Add a clean transcript section at the end
-                formatted_summary = (
+                formatted_content = (
                     f"{summary}\n\n## Original Transcript\n\n{transcript}"
                 )
+            else:
+                # Save transcript only
+                formatted_content = f"# Transcript\n\n{transcript}"
 
-                summary_path = os.path.join(
-                    output_dir, f"{file_timestamp}_{summary_timestamp}.md"
-                )
-                with open(summary_path, "w") as f:
-                    f.write(formatted_summary)
+            output_path = os.path.join(output_dir, f"{file_timestamp}_{timestamp}.md")
+            with open(output_path, "w") as f:
+                f.write(formatted_content)
 
         finally:
             # Clean up the temporary wav file
@@ -84,7 +83,7 @@ def process_file(
 
 @click.group()
 def cli() -> None:
-    """MediaMind CLI for processing video files."""
+    """Mediamind CLI for processing video files."""
     pass
 
 
@@ -97,21 +96,21 @@ def cli() -> None:
     help="Directory to save output files",
 )
 @click.option(
-    "--summarize",
+    "--no-summary",
     is_flag=True,
-    help="Generate a summary of the transcript",
+    help="Skip generating a summary of the transcript",
 )
 def process(
-    input_path: str, output_dir: str = "transcripts", summarize: bool = False
+    input_path: str, output_dir: str = "transcripts", no_summary: bool = False
 ) -> None:
     """Process a single video file.
 
     Args:
         input_path: Path to the video file to process
         output_dir: Directory to save output files
-        summarize: Whether to generate a summary
+        no_summary: Whether to skip generating a summary
     """
-    process_file(input_path, summarize, output_dir)
+    process_file(input_path, not no_summary, output_dir)
 
 
 @cli.command()
@@ -119,11 +118,19 @@ def process(
     "directory", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
 @click.option(
-    "--summarize",
-    is_flag=True,
-    help="Generate summaries for transcripts",
+    "--output-dir",
+    type=click.Path(),
+    default="transcripts",
+    help="Directory to save output files",
 )
-def batch(directory: str, summarize: bool = False) -> None:
+@click.option(
+    "--no-summary",
+    is_flag=True,
+    help="Skip generating summaries for transcripts",
+)
+def batch(
+    directory: str, output_dir: str = "transcripts", no_summary: bool = False
+) -> None:
     """Process all video files in a directory."""
     video_files: List[str] = []
     for file in os.listdir(directory):
@@ -135,7 +142,7 @@ def batch(directory: str, summarize: bool = False) -> None:
         return
 
     for video_file in video_files:
-        process_file(video_file, summarize, "transcripts")
+        process_file(video_file, not no_summary, output_dir)
 
 
 if __name__ == "__main__":

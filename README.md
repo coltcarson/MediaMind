@@ -84,7 +84,14 @@ python -m mediamind process "path/to/your/video.mov"
 
 ### Batch process multiple .mov files in a directory:
 ```bash
+# Basic usage
 python -m mediamind batch "path/to/directory"
+
+# Specify custom output directory
+python -m mediamind batch "path/to/directory" --output-dir "path/to/output"
+
+# Include AI-generated summaries
+python -m mediamind batch "path/to/directory" --summarize
 ```
 
 ### Generate summary from an existing transcript:
@@ -96,9 +103,30 @@ python -m mediamind summarize "path/to/transcript.md"
 Transcripts and summaries are saved in the `transcripts` directory with timestamps:
 ```
 transcripts/
-├── video_20250112_103121.md
-└── video_summary_20250112_103121.md
+├── 2025-02-05 22-01-26_20250205_220126.md
+└── 2025-02-05 21-58-33_20250205_215833.md
 ```
+
+Each filename follows the format: `[Date Time]_[Timestamp].md`
+
+### Using the Convenience Script
+A convenience script `run_mediamind.sh` is provided to simplify batch processing:
+```bash
+# Make the script executable
+chmod +x run_mediamind.sh
+
+# Process videos with default output directory (./transcripts)
+./run_mediamind.sh /path/to/videos
+
+# Process videos with custom output directory
+./run_mediamind.sh /path/to/videos /path/to/output
+```
+
+The script will:
+- Check if the input directory exists
+- Create the output directory if it doesn't exist
+- Automatically activate the virtual environment
+- Process all .mov files in the input directory
 
 ## 🏗️ Project Structure
 
